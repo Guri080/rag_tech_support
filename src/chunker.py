@@ -1,6 +1,3 @@
-import docx
-import PyPDF2
-import os
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 def read_text_file(file_path: str):
@@ -8,41 +5,48 @@ def read_text_file(file_path: str):
     with open(file_path, 'r', encoding='utf-8') as file:
         return file.read()
     
-def split_text(text: str, chunk_size: int = 500):
-    """Split text into chunks while preserving sentence boundaries"""
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=100,
-        chunk_overlap=20,
-        length_function=len
-        )
-    chunks = text_splitter.split_text(long_text)
-    sentences = text.replace('\n', ' ').split('. ')
+def header_chunk(text: str, source_id: str) -> list[dict]:
+    """Split documents into chunks on ## headers"""
     chunks = []
-    current_chunk = []
-    current_size = 0
+    sentences = text.split('##')
 
-    for sentence in sentences:
-        sentence = sentence.strip()
-        if not sentence:
-            continue
+    fallback_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=800,
+        chunk_overlap=100,
+    )
 
-        # Ensure proper sentence ending
-        if not sentence.endswith('.'):
-            sentence += '.'
+    for section in sentences:
+        header = section.split('\n')[0].strip('# ')
 
-        sentence_size = len(sentence)
-
-        # Check if adding this sentence would exceed chunk size
-        if current_size + sentence_size > chunk_size and current_chunk:
-            chunks.append(' '.join(current_chunk))
-            current_chunk = [sentence]
-            current_size = sentence_size
+        # if a section is less than 1000 chars, keep as one chuck
+        # Otherwise if section is long, make sub chunks
+        if len(section) < 1000:
+            chunks.append({
+                'text': section,
+                'source': "docs",
+                'source_id': source_id,
+                "metadata": {"header": header}
+            })
         else:
-            current_chunk.append(sentence)
-            current_size += sentence_size
-
-    # Add the last chunk if it exists
-    if current_chunk:
-        chunks.append(' '.join(current_chunk))
-
+            sub_chunks = fallback_splitter.split_text(section)
+            for i, sub in enumerate(sub_chunks):
+                chunks.append({
+                    "text": sub,
+                    "source": "docs",
+                    "source_id": source_id,
+                    "metadata": {"header": header, "sub_chunk": i}
+                })
     return chunks
+
+def forum_chunks(text: str, source_id: str) -> list[dict]:
+    posts = [p.strip() for p in text.split('---') if p.strip()]
+
+    return [
+        {
+            "text": post,
+            "source": "forum",
+            "source_id": source_id,
+            "metadata": {"post_index": i}
+        }
+        for i, post in enumerate(posts)
+    ]
