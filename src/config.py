@@ -1,1 +1,1 @@
-remake_embeddings = False
+remake_embeddings = False # set true to recreatea all vector embeddings for similarity search
