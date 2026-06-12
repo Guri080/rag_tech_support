@@ -5,7 +5,7 @@ def read_text_file(file_path: str):
     with open(file_path, 'r', encoding='utf-8') as file:
         return file.read()
     
-def header_chunk(text: str, source_id: str) -> list[dict]:
+def header_chunks(text: str, source_id: str, source_type: str) -> list[dict]:
     """Split documents into chunks on ## headers"""
     chunks = []
     sentences = text.split('##')
@@ -23,7 +23,7 @@ def header_chunk(text: str, source_id: str) -> list[dict]:
         if len(section) < 1000:
             chunks.append({
                 'text': section,
-                'source': "docs",
+                'source':source_type,
                 'source_id': source_id,
                 "metadata": {"header": header}
             })
@@ -32,19 +32,19 @@ def header_chunk(text: str, source_id: str) -> list[dict]:
             for i, sub in enumerate(sub_chunks):
                 chunks.append({
                     "text": sub,
-                    "source": "docs",
+                    "source": source_type,
                     "source_id": source_id,
                     "metadata": {"header": header, "sub_chunk": i}
                 })
     return chunks
 
-def forum_chunks(text: str, source_id: str) -> list[dict]:
+def forum_chunks(text: str, source_id: str, source_type: str) -> list[dict]:
     posts = [p.strip() for p in text.split('---') if p.strip()]
 
     return [
         {
             "text": post,
-            "source": "forum",
+            "source": source_type,
             "source_id": source_id,
             "metadata": {"post_index": i}
         }
