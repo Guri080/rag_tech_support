@@ -8,17 +8,17 @@ class VectorEmbeddings():
                  embedding_model: str = "all-MiniLM-L6-v2"
                  ):
         # initialize ChromaDB client with persistence
-        client = chromadb.PersistentClient(path=persistant_path)
-
+        self.client = chromadb.PersistentClient(path=persistant_path)
+        self.collection_name = collection_name
         # configure sentence transformer embeddings
-        sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
+        self.sentence_transformer_ef = embedding_functions.SentenceTransformerEmbeddingFunction(
             model_name=embedding_model
         )
 
         # create collection
-        self.collection = client.get_or_create_collection(
+        self.collection = self.client.get_or_create_collection(
             name=collection_name,
-            embedding_function=sentence_transformer_ef
+            embedding_function=self.sentence_transformer_ef
         )
     
     def add_chunks(self, chunks: list[dict]) -> None:
@@ -66,5 +66,5 @@ class VectorEmbeddings():
         self.client.delete_collection(self.collection_name)
         self.collection = self.client.get_or_create_collection(
             name=self.collection_name,
-            embedding_function=self.embedding_fn,
+            embedding_function=self.sentence_transformer_ef,
         )
