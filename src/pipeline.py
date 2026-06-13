@@ -8,6 +8,7 @@ from src.llm import LLMClient
 import src.config as config
 from src.reranker import Reranker
 from src.logger import QueryLogger
+from src.contradiction import ContradictionDetector
 
 import json
 
@@ -51,7 +52,7 @@ class Retrieve:
             # strip markdown fences if model wraps in ```json
             cleaned = response.strip().replace("```json", "").replace("```", "").strip()
             weights = json.loads(cleaned)
-            # sanity check to see if all keys present, weights sum ~= 1
+            # sanity check to see if all keys present, weights sum approx. 1
             assert set(weights.keys()) == {"docs", "forum", "blog"}
             return weights
         except (json.JSONDecodeError, AssertionError, KeyError):
@@ -83,24 +84,37 @@ class Retrieve:
 
 class RagPipeline():
     """Full rag pipeline that feeds ranked chunks to the LLM"""
-    def __init__(self, vector_store, llm_client, retriever, reranker, logger):
+    def __init__(self, vector_store, llm_client, retriever, reranker, logger, contradiction):
         self.vs = vector_store
         self.llm = llm_client
         self.retriever = retriever
         self.reranker = reranker
         self.logger = logger
+        self.contradiction_detector = contradiction
     
     def answer(self, query: str) -> dict:
         candidates = self.retriever.retrieve(query)
         chunks = self.reranker.rerank(query, candidates, top_k=5)
-
+        
+        # detect contradictions
+        contradictions = self.contradiction_detector.detect(query, chunks)
+        print(f"DEBUG: contradictions found: {len(contradictions)}")
+        print(f"DEBUG: raw: {contradictions}")
+    
         context = "\n\n---\n\n".join([
             f"[Source: {c['metadata']['source']} | {c['metadata']['source_id']}]\n{c['text']}"
             for c in chunks
         ])
+        
+        contradiction_note = ""
+        if contradictions:
+            contradiction_note = "\n\nIMPORTANT - the following contradictions were detected between sources:\n"
+            for c in contradictions:
+                contradiction_note += f"- {c['claim_a']} ({c['source_a']}) vs {c['claim_b']} ({c['source_b']}). {c['explanation']}\n"
+            contradiction_note += "\nWhen answering, acknowledge these disagreements explicitly."
 
-        system = "You are a technical support assistant. Answer the user's question using only the provided context. Cite which source each claim comes from. If the context doesn't contain the answer, say so."
-        user = f"Context:\n{context}\n\nQuestion: {query}"
+        system = "You are a technical support assistant. Answer using only the provided context. Cite sources for each claim. If sources disagree, surface the disagreement transparently — do not silently pick one."
+        user = f"Context:\n{context}{contradiction_note}\n\nQuestion: {query}"
         
         answer = self.llm.generate(system, user)
         self.logger.log(query, answer, chunks)
@@ -109,6 +123,7 @@ class RagPipeline():
             "query": query,
             "answer": answer,
             "chunks_used": chunks,
+            "contradictions": contradictions,
         }
 
 if __name__ == '__main__':
@@ -138,16 +153,18 @@ if __name__ == '__main__':
         print(f"Using existing {vs.count()} chunks")
     
     # ---- retrieve and provide content to model ----
-    llm_client = LLMClient()
+    llm_client = LLMClient(model_name="gpt-oss-120b")
     retrival = Retrieve(vs, llm_client)
     reranker = Reranker()
     logger = QueryLogger()
+    contradiction = ContradictionDetector(llm_client)
 
     myRag = RagPipeline(vs,
                       llm_client,
                       retrival,
                       reranker,
-                      logger)
+                      logger,
+                      contradiction)
     print('rag done')
     query = " ".join(sys.argv[1:]) or "How do I configure timeouts?"
     result = myRag.answer(query)
