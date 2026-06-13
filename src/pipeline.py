@@ -13,6 +13,7 @@ from src.contradiction import ContradictionDetector
 import json
 
 class Retrieve:
+    """retrieves top 5 chunks to enrich model's context window"""
     def __init__(self, vector_store, llm_client):
         self.vs = vector_store
         self.llm = llm_client
@@ -126,26 +127,32 @@ class RagPipeline():
             "contradictions": contradictions,
         }
 
+def build_chunks():
+    """builds and returns chunks for the available data"""
+    all_chunks = []
+
+    source_metadata = [
+        ("data/docs", header_chunks, "docs"),
+        ("data/blogs", header_chunks, "blog"),
+        ("data/forum", forum_chunks, "forum"),
+    ]
+
+    for folder, method, source in source_metadata:
+        paths = list(Path(folder).glob("*.md"))
+        assert paths, f"No .md files found in {folder}"
+        for path in paths:
+            text = read_text_file(path)
+            all_chunks.extend(method(text, path.name, source_type=source))
+
+    return all_chunks
+
+
 if __name__ == '__main__':
     #---- Generate chunks and embbed ----
     vs = VectorEmbeddings()
 
     if config.remake_embeddings or vs.count() == 0:
-        all_chunks = []
-        # Docs
-        for path in Path("data/docs").glob("*.md"):
-            text = read_text_file(path)
-            all_chunks.extend(header_chunks(text, path.name, source_type="docs"))
-
-        # Blogs
-        for path in Path("data/blogs").glob("*.md"):
-            text = read_text_file(path)
-            all_chunks.extend(header_chunks(text, path.name, source_type="blog"))
-
-        # Forums
-        for path in Path("data/forum").glob("*.md"):
-            text = read_text_file(path)
-            all_chunks.extend(forum_chunks(text, path.name, source_type="forum"))
+        all_chunks = build_chunks()
         vs.reset()
         vs.add_chunks(all_chunks)
         print(f"Embedded {vs.count()} chunks")
@@ -153,24 +160,28 @@ if __name__ == '__main__':
         print(f"Using existing {vs.count()} chunks")
     
     # ---- retrieve and provide content to model ----
-    llm_client = LLMClient(model_name="gpt-oss-120b")
+
+    ## Init the pipeline services
+    llm_client = LLMClient(model_name=config.base_llm)
     retrival = Retrieve(vs, llm_client)
     reranker = Reranker()
     logger = QueryLogger()
     contradiction = ContradictionDetector(llm_client)
 
+    # feed the services to the pipeline
     myRag = RagPipeline(vs,
                       llm_client,
                       retrival,
                       reranker,
                       logger,
                       contradiction)
-    print('rag done')
-    query = " ".join(sys.argv[1:]) or "How do I configure timeouts?"
-    result = myRag.answer(query)
 
-    print(f"Q: {result['query']}\n")
-    print(f"A: {result['answer']}\n")
-    print(f"Sources used:")
-    for c in result['chunks_used']:
-        print(f"  - {c['metadata']['source']}/{c['metadata']['source_id']} (distance: {c['distance']:.3f})")
+    if config.debug_rag:
+        query = " ".join(sys.argv[1:]) or "How do I configure timeouts?"
+        result = myRag.answer(query)
+
+        print(f"Q: {result['query']}\n")
+        print(f"A: {result['answer']}\n")
+        print(f"Sources used:")
+        for c in result['chunks_used']:
+            print(f"  - {c['metadata']['source']}/{c['metadata']['source_id']} (distance: {c['distance']:.3f})")

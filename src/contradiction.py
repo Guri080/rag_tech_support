@@ -1,4 +1,5 @@
 import json
+import src.config as config
 
 class ContradictionDetector:
     def __init__(self, llm_client):
@@ -42,7 +43,8 @@ class ContradictionDetector:
         user = f"Input chunks:\n\n{context}\n\nOutput:"
         
         response = self.llm.generate(system, user)
-        print(f"DEBUG contradiction raw response (first 500 chars):\n{response[:500]}\n")
+        if config.debug_rag:
+            print(f"DEBUG contradiction raw response (first 500 chars):\n{response[:500]}\n")
         
         try:
             cleaned = response.strip().replace("```json", "").replace("```", "").strip()
