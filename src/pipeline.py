@@ -146,9 +146,8 @@ def build_chunks():
 
     return all_chunks
 
-
 if __name__ == '__main__':
-    #---- Generate chunks and embbed ----
+    #---- Generate chunks and embbedings ----
     vs = VectorEmbeddings()
 
     if config.remake_embeddings or vs.count() == 0:
@@ -177,7 +176,8 @@ if __name__ == '__main__':
                       contradiction)
 
     if config.debug_rag:
-        query = " ".join(sys.argv[1:]) or "How do I configure timeouts?"
+        assert sys.argv[1:] != [], f"please provide a query in CLI"
+        query = " ".join(sys.argv[1:])
         result = myRag.answer(query)
 
         print(f"Q: {result['query']}\n")

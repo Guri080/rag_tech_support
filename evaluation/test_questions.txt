@@ -1,0 +1,7 @@
+python -m src.pipeline "How do I configure the streaming engine?"
+
+python -m src.pipeline "What's the workaround for implementing a piecewise calibration curve in a streaming feature?"
+Type: answer=tessera.transform.piecewise_linear. Only documented in forums
+
+python -m src.pipeline "Has the batched lineage endpoint shipped in Tessera 2.1?"
+Type: Contradiction detection
