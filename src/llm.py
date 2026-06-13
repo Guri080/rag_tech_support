@@ -6,7 +6,7 @@ load_dotenv()
 
 class LLMClient():
     def __init__(self, 
-                 model_name: str = "llama4-scout-17b",):
+                 model_name: str = "gpt-oss-120b",):
         self.model_name = model_name
         self.client = OpenAI(
             base_url="https://openai.rc.asu.edu/v1",

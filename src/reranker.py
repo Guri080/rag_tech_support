@@ -1,6 +1,7 @@
 from sentence_transformers import CrossEncoder
 
 class Reranker:
+    """Ranks chunk candidates with closeness score from query"""
     def __init__(self, model_name: str = "BAAI/bge-reranker-base"):
         self.model = CrossEncoder(model_name)
     
