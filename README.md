@@ -53,18 +53,21 @@ python -m evaluation.run_examples
 ## Where things are
 
 ```
-data/            the three source folders (docs, blogs, forum)
+chroma_db_embeddings/   chunk vector embeddings
+data/                   the three source folders (docs, blogs, forum)
+ | blogs/
+ | docs/
+ | forum/
 src/
- | chunker.py         per-source chunking
- | vectorstore.py     chroma wrapper
- | pipeline.py        retrieval + weighting + the full pipeline
- | reranker.py        cross-encoder reranking
- | contradiction.py   contradiction detection
- | llm.py             openai client wrapper
- | logger.py          jsonl query logging
-evaluation/      example queries and their outputs
-logs/            queries.jsonl, one line per query
-report/          the writeup
+ | chunker.py               per-source chunking
+ | vectorstore.py           chroma wrapper
+ | pipeline.py              retrieval + weighting + the full pipeline
+ | reranker.py              cross-encoder reranking
+ | contradiction.py         contradiction detection
+ | llm.py                   openai client wrapper
+ | logger.py                jsonl query logging
+evaluation/             example queries and their outputs
+logs/                   queries.jsonl, one line per query
 ```
 
 ## Outputs
