@@ -55,13 +55,13 @@ python -m evaluation.run_examples
 ```
 data/            the three source folders (docs, blogs, forum)
 src/
-  chunker.py         per-source chunking
-  vectorstore.py     chroma wrapper
-  pipeline.py        retrieval + weighting + the full pipeline
-  reranker.py        cross-encoder reranking
-  contradiction.py   contradiction detection
-  llm.py             openai client wrapper
-  logger.py          jsonl query logging
+ | chunker.py         per-source chunking
+ | vectorstore.py     chroma wrapper
+ | pipeline.py        retrieval + weighting + the full pipeline
+ | reranker.py        cross-encoder reranking
+ | contradiction.py   contradiction detection
+ | llm.py             openai client wrapper
+ | logger.py          jsonl query logging
 evaluation/      example queries and their outputs
 logs/            queries.jsonl, one line per query
 report/          the writeup
